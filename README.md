@@ -1,2 +1,36 @@
 # node-features
 Features based on NodeJs
+- Authentication
+    - Social auth, OTP based auth, Refresh token, username password auth, logout, 2FA
+    - Role base auth, auth-2
+- Authorization
+- NestJs project
+- Chat Application
+- Video streamming application
+- Music Application
+- Checkout and Subscription with coupon apply
+- Database modeling
+- Microservice app
+- Deployment microservice app
+- GraphQL
+- Elastic Search
+- Full-Text search
+- Performance optimization
+- Kafka integration (pub, sub, message queue)
+- RabbitMQ
+- OpenAI integration (OpenAI, Anthropic, and other LLMs to enhance the platform.)
+- File upload (video, music, PDF, text, word) (it should be scalable)
+- Pagination
+- Query search
+- CRUD operation
+- Transactional operation
+- Indexing 
+- Load balancing
+- Creates shorts videos (Reels)
+- Modeling structure of likes, dislikes, subscribe
+- Sharing
+- Monitoring tool (New Relic)
+- Prisma
+- Ensure the performance, security, and stability of the platform through testing, debugging, and adherence to best practices.
+- Contribute to brainstorming sessions, code reviews, and technical discussions to continuously improve our product.
+- Access opportunities for growth and leadership as we scale.
