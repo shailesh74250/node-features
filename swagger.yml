@@ -1,0 +1,145 @@
+openapi: '3.0.2'
+info:
+  title: Template API  [must be updated before deployment]
+  description: >
+    This is an example template. The endpoints provided should be replaced by the documentation of your service's endpoints
+  version: '1.0'
+servers:
+  - url: https://as-typescript-microservice-template.autosense-cloud.com/v1
+
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: api-key
+      in: header
+
+  parameters:
+    campaign_id:
+      in: path
+      name: campaign_id
+      required: true
+      schema:
+        type: string
+      description: Campaign ID
+      example: 'MASTERCARD_CAMPAIGN'
+    spark_id:
+      in: path
+      name: spark_id
+      required: true
+      schema:
+        type: string
+      description: Spark provisioning identifier
+      example: '6065e9b058e7fb81854bAIEdu'
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - message
+
+    Campaign:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: true
+        id:
+          type: string
+          example: 'MASTERCARD_CAMPAIGN_1'
+          description: Unique ID of the campaign
+
+    GetCampaignsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Campaign'
+
+  responses:
+    NotFound:
+      description: The specified resource for this device was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequest:
+      description: Bad request parameters.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "'enabled' is required"
+
+    Unauthorized:
+      description: Wrong username/password.
+
+security:
+  - api_key: []
+
+paths:
+  /campaigns:
+    get:
+      summary: Get all campaigns in database
+      description: Returns all active, expired and disabled campaigns
+      tags:
+        - 'Campaigns'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCampaignsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create a new campaign
+      tags:
+        - 'Campaigns'
+      requestBody:
+        required: true
+        content:
+          schema:
+            schema:
+              $ref: '#/components/schemas/Campaign'
+      responses:
+        '204':
+          description: Success
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update an existing campaign
+      description: The entire campaign object must be submitted without the created_at and updated_at fields to be updated based on the campaign_id
+      requestBody:
+        required: true
+        content:
+          schema:
+            schema:
+              $ref: '#/components/schemas/Campaign'
+      tags:
+        - 'Campaigns'
+      responses:
+        '204':
+          description: Success
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'

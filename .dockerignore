@@ -1,0 +1,11 @@
+*task-definition.json
+**/__tests__
+**/*test*
+README.md
+jest.config.js
+.*
+docs
+coverage
+build
+Dockerfile
+node_modules
