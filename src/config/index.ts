@@ -10,7 +10,6 @@ export const getApiKeys = (key: string): string[] => {
 };
 
 const is_windows = process.env['host_os'] === 'windows';
-console.log(process.env['host'])
 
 export default {
   port: process.env.PORT || 3000,

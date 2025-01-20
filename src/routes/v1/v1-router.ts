@@ -1,10 +1,8 @@
 import { Router } from 'express';
-import loginRouter from '../../modules/login/login-router';
-import registerRouter from '../../modules/register/register-router';
+import testRouter from '../../modules/test-module/test-router';
 
 const v1 = Router();
 
-v1.use('/auth', loginRouter);
-v1.use('/auth', registerRouter);
+v1.use('/auth', testRouter);
 
 export default v1;
