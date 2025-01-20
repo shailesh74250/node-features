@@ -9,10 +9,18 @@ export const getApiKeys = (key: string): string[] => {
   return api_keys.split(',');
 };
 
+const is_windows = process.env['host_os'] === 'windows';
+console.log(process.env['host'])
+
 export default {
-  service_a: {
-    url: 'my-api.com',
-    api_key: getEnvironmentVariable('SERVICE_A_API_KEY'),
+  port: process.env.PORT || 3000,
+  database: {
+    host: getEnvironmentVariable('host'),
+    port: 5432,
+    username: getEnvironmentVariable(is_windows ? 'db_username' : 'username'),
+    password: getEnvironmentVariable('password'),
+    database: getEnvironmentVariable('dbname'),
+    schema: getEnvironmentVariable('schema'),
   },
 
   api_keys: getApiKeys('ALLOWED_API_KEYS'),
