@@ -5,6 +5,8 @@
     "lib": ["es2018"],
     "outDir": "build",
     "allowJs": false,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
     "resolveJsonModule": true,
     "strict": true,
     "noFallthroughCasesInSwitch": true,
