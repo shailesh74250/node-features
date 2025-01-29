@@ -11,6 +11,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   phone: string | null;
 
+  @Column({ type: 'text'})
+  password: string
+
   @Column({ type: 'enum', enum: ['active', 'inactive', 'terminated'], default: 'active' })
   status: string;
 
