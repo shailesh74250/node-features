@@ -11,7 +11,7 @@ export class User {
   @Column({ type: 'text', nullable: true })
   phone: string | null;
 
-  @Column({ type: 'enum', enum: ['active', 'inactive', 'terminated'], default: 'inactive' })
+  @Column({ type: 'enum', enum: ['active', 'inactive', 'terminated'], default: 'active' })
   status: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', update: false })
