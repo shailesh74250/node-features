@@ -69,3 +69,13 @@
     - The video is served through AWS CloudFront (CDN) for low-latency playback.
 - Notification System
     - The Notification Service (Kafka consumer) sends an email/webhook notifying the user.
+
+## Packages used
+- kafkajs
+- multer
+- aws-sdk
+- child_process
+- FFmpeg
+- express
+- pg
+- typeorm
