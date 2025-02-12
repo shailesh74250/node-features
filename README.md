@@ -1,138 +1,80 @@
-# Typescript Microservice Template
+# Kafka 
+- Apache Kafka is a distributed event steaming platofrm used for real-time data processing, event-driven architecture, and large-scale queuing. It allows applications to publish, subscribe, store, and process data streams in a fault-tolerant, scalable, and high-performance way.
 
-Deployment to Fargate.
+## Key Use Case of Kafka
+- 1️⃣ Real-Time Data Processing
+- 2️⃣ Event-Driven Architectures
+- 3️⃣ Log Aggregation & Monitoring
+- 4️⃣ Streaming ETL & Data Pipelines
+- 5️⃣ Fraud Detection & Security Analytics
+- 6️⃣ IoT Data Processing
+- 7️⃣ Real-Time Analytics & Metrics Processing
+- 8️⃣ Message Queueing & Asynchronous Processing
 
-## Getting started
+## Companies uses Kafka 
+- LinkedIn
+    - LinkedIn, the company that originally developed Kafka, uses it for:
+    - Tracking user activities (profile views, searches, likes)
+    - Log aggregation across distributed services
+    - Metrics collection for performance monitoring
+    - Real-time recommendations (jobs, connections)
+    - Example: If a user views a job posting, Kafka captures this event in real-time and updates the recommendation engine.
 
-Complete the steps below to deploy your project to AWS. You will set up the service using the AWS console and configure your CI/CD pipeline to deploy the service automatically.
+- Netflix - Kafka for real-time event streaming
+    - Netflix processes millions of events per second using Kafka for:
+    - Monitoring user behavior (video streaming, pause, rewind)
+    - Content recommendation engine (personalized movie suggestions)
+    - Log processing for system health monitoring
+    - Live error tracking for troubleshooting
+    - Example: If a user pauses a video, Kafka logs the event and updates the recommendation system.
 
-## Create an ECR repository
+- Uber – Kafka for Trip Tracking & Dynamic Pricing
+    - Uber’s real-time infrastructure is powered by Kafka for:
+    - Trip tracking & driver updates (GPS locations)
+    - Dynamic pricing adjustments based on demand
+    - Real-time fraud detection for ride requests
+    - Event-driven messaging between microservices
+    - Example: If a driver cancels a ride, Kafka notifies nearby drivers instantly.
 
-You must first build your Docker image locally and push it to ECR to be able to configure your Fargate srevice. After manually configuring it, your pipeline will be able to automatically deploy any new versions of the service.
+- Airbnb – Kafka for Search Indexing & Fraud Detection
+    - Airbnb uses Kafka for:
+    - Real-time search indexing for listings
+    - Tracking user behavior for recommendations
+    - Fraud detection in bookings
+    - Payments processing & validation
+    - Example: If a new listing is added, Kafka updates the search index immediately.
 
-1. Create a new ECR repository.
-2. Using the push commands in the **View push commands** window, build and push your Docker image from your local computer.
+- PayPal – Kafka for Fraud Detection & Transactions
+    - PayPal processes millions of financial transactions daily using Kafka for:
+    - Real-time fraud detection using AI/ML models
+    - Transaction validation and security monitoring
+    - Asynchronous message processing between payment services
+    - Example: If an unusual login occurs, Kafka alerts the security team in real-time.
 
-## Store your environment variables on AWS Secrets Manager
+- Twitter – Kafka for Log Processing & Analytics
+    - Twitter relies on Kafka for:
+    - Processing real-time tweets & likes
+    - Log aggregation from multiple servers
+    - Real-time analytics & trending topics
+    - Example: When a tweet goes viral, Kafka updates trends in real-time.
 
-The best practice for storing your application's environment variables is to place them in a secret on AWS Secret Manager. Then you can insert this secret into your application's environment and it will be processed automatically.
+- Shopify – Kafka for Order Processing & Inventory Management
+    - Shopify’s Kafka-based architecture helps with:
+    - Processing customer orders asynchronously
+    - Updating stock levels in real-time
+    - Processing payments and refunds
+    - Example: When a customer places an order, Kafka updates inventory instantly.
 
-1. Create a new secret in the AWS Secrets Manager console.
-2. Choose Other as secret type and defined all your environmnet variables in separate rows.
-3. After creating the secret, note down the ARN.
+- Spotify – Kafka for Music Streaming Analytics
+    - Spotify uses Kafka for:
+    - Tracking real-time music playback data
+    - Generating personalized recommendations
+    - Ad targeting & real-time analytics
+    - Example: If a user skips a song, Kafka logs the event for recommendation updates.
 
-### Route53 - create your subdomain
+- ✅ High Throughput & Low Latency – Can handle millions of messages per second.
+- ✅ Scalability – Can scale horizontally by adding more brokers.
+- ✅ Durability & Fault Tolerance – Ensures data persistence even if services fail.
+- ✅ Event-Driven Architecture – Enables microservices to communicate asynchronously.
+- ✅ Exactly-Once Processing – Ensures messages are processed reliably without duplication.
 
-For accessing your service via HTTP API, you must define a subdomain which will be later connected to your task definition.
-
-1. Create a new record under the hosted zone `autosense-cloud.com`
-2. Define the subdomain you want for your service.
-3. Change the record type to CNAME and keep it as not alias.
-4. In the Value field, insert your Load balancer URL: `autosense-secure-1194175686.eu-west-1.elb.amazonaws.com`
-5. Note down the full HTTPS subdomain URL.
-
-### Create a Target Group
-
-A target group is like a mailing address you can claim for your service. It will be the destination of the incoming traffic from the load balancer and will also monitor your service's health via the health-check endpoint.
-
-1. Go to EC2 dashboard and find the Target Groups tab.
-2. Create a new target group of type **IP addresses**.
-3. Name your target group.
-4. Choose protocol `HTTP` and port `80`. These settings apply for network communication inside your VPC.
-5. Select the one VPC called autosense.
-6. Define your health-check route. By default it's `/health-check/ping`
-7. Go to next page and click Create.
-
-### Add your Target Group to the Load Balancer
-
-You will connect the incoming traffic in the load balancer to reach your service via the target group.
-
-1. Go to Load Balancers, and click `autosense-secure`, select `Listeners` tab, find and click on Listener ID `HTTPS : 443`.
-2. Select `Rules` tab and click on `Manage rules` button.
-3. Click the `(+)` icon on top, then **Insert rule** to add a new rule.
-4. Under condition, choose Host header and insert the full subdomain URL you defined in Route53, for example: `ts-microservice-template.autosense-cloud.com`
-5. Add new action: Forward to... then choose your previously created target group.
-6. Click save.
-
-### Create an ECS Task Definition
-
-Here you will configure a task definition, it's basically a template of how to run an instance of your service. You will also store this configuration in your project as code, so your pipeline can redeploy a new version automatically.
-
-1. Go to ECS console and click Create new Task Definition.
-2. Select `ecsTaskExecutionRole` for Task and Task Execution Role.
-3. Set task size. default minimum is 0.5GB and 0.25vCPU.
-4. Add a container and reference your ECR image without the version. For example: `692087017035.dkr.ecr.eu-west-1.amazonaws.com/as-typescript-microservice-template`
-5. Map your container port. By default it's 3000.
-6. Add your SSM secret as an environment variable with the name `AWS_ENVIRONMENT_VARIABLES` and using valueFrom to provide your secret's ARN.
-7. After clicking create, copy the JSON configuration into your `task-definition.json` file in your project.
-8. Remove the following properties from your local `task-definiton.json` file: `requiresAttributes`, `compatibilities`, `revision`, `taskDefinitionArn` and `status`.
-
-### Create a new ECS service
-
-1. Go to Amazon ECS Console, create a new service and choose the task definition family created above with the latest version.
-2. Under network settings, choose the one available Cluster VPC.
-3. Choose all three internal subnets.
-4. Select an existing security group called `autosense-default-security`
-5. Auto-assign public IP: DISABLED
-6. Choose Application Load Balancer (this will let you route the incoming traffic to your service)
-7. Click on **Add to Load Balancer**.
-8. Choose `443:HTTPS` as Production Listening Port.
-9. Pick your target group created in the previous steps.
-10. Disable service discovery.
-11. Go to the next step and click Create Service.
-
-### Done! Run your pipeline
-
-After completing the above steps, you can commit your changes and the Github Actions will take care of deploying a new version of your service on each push.
-
-### Troubleshooting
-
-- Make sure to call your service using HTTPS protocol, otherwise you will get a timeout.
-- It should take about 5 minutes for your subdomain to be accessible after configuring it.
-
-## Npm commands
-
-| Command       | Description                            |
-| ------------- | -------------------------------------- |
-| npm start     | Start local dev server with hot-reload |
-| npm test      | Run tests                              |
-| npm test:ci   | Run tests in pipeline without dotenv   |
-| npm run lint  | Lint and fix                           |
-| npm run build | Builds typescript project              |
-
-## Environment variables
-
-The application runs in 3 different environments where the environment variables must be defined.
-
-| Environment    | Tool                     | Description                                                                                                   |
-| -------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Local          | dotenv                   | See `.env.example` to create your `.env` config which auto-loads the environment in local development         |
-| Github Actions | Github Secrets + AWS SSM | Define AWS Credentials and SECRET_NAME in the GHA workflow to fetch and configure environment from SSM        |
-| AWS Fargate    | AWS SSM                  | Application's AWS secret is loaded into the app via `AWS_ENVIRONMENT_VARIABLES` and mapped onto `process.env` |
-
-## Tests
-
-- Place your test files in the same directory where the tested file is.
-- Naming convention of your test file: `user-controller.test.ts`
-- Jest will load all files ending `.test.ts`
-- Code coverage is managed by Istanbul, which is built into Jest. Run `npm test` to see your code coverage.
-- You can view your code coverage results by opening the report's `index.html` file in your browser found in the `coverage/` folder after running `npm test`.
-
-## Toolstack
-
-| Feature            | Tool              |
-| ------------------ | ----------------- |
-| CI/CD              | Github Actions    |
-| Server             | Express           |
-| HTTP requests      | Axios             |
-| Testing framework  | Jest              |
-| E2E testing        | Supertest         |
-| Linting            | ESLint            |
-| Formatting         | Prettier          |
-| Container registry | AWS ECR           |
-| Deployment         | AWS ECS (Fargate) |
-
-## References
-
-- [Using ESLint and Prettier with Typescript](https://www.robertcooper.me/using-eslint-and-prettier-in-a-typescript-project)
-- [AWS Actions for CI pipeline](https://github.com/aws-actions)
