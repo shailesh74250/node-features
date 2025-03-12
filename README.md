@@ -97,3 +97,15 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+
+# Nest.js Concept
+  ## Provide TypeSafty using TypeScript
+  ## Modular Architecture
+  ## Dependency Injection (DI)
+  ## Decorators & Metadata
+  ## Built-in Support for REST & GraphQL
+  ## Middleware, Guards, Interceptors, Filters
+  ## ORM Support (Sequelize, TypeORM, Prisma, etc.)
+  ## WebSockets & Microservices
+  ## Database Integration
