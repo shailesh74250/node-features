@@ -1,6 +1,46 @@
 ## Best Practices for a Robust & Scalable NestJS Application
 ### Building a scalable, maintainable, and robust NestJS application requires following best practices in architecture, performance optimization, security, and maintainability.
 
+
+
+## Every Nest Project Must Have
+- Modular Architecture
+- Logger (Winston) (connect logs with an alert system so that in critical situations, we get messages on Slack, teams, or email)
+- Setup production logs and metrics (Prometheus, Grapha, Loki, or NewRelic)
+- Error Handling
+- Security Header should be set
+- Middleware
+- Validate and Sanitize Request data using Pipes
+- API documentation usign OpenAPI
+- Database Connectivity
+- Linting setup
+- Prettier setup
+- Test case setup (Unit and Integration E2E)
+- API Versioning
+- Docker setup
+- Package.json has needed commands (start, prod, staging, test, migration, lint, format)
+- Rate limiter
+- Enabled Cors
+- env files according to different environments like - dev, test, stage, prod
+- All constants should defined with a similar format enum and in one place so that it is easy to modify their values
+- Setup docker-compose file for multiple container projects
+- Setup CI/CD pipeline
+- Optimized database queries (using TypeORM or Sequalized)
+- Use Worker Threads for heavy background task
+- Use Clustering for Horizontal scaling
+- Use Streams for dealing with big data set
+- Use Buffer for dealing with Binary data file
+- Enabled caching to reduce response time
+- Lazy load module
+- All module have their own configuration file and config file variables value going to access through env files
+- Specify the env file configuration in the main file so based on the app environment it will pick the correct env file
+- Encrypt sensitive information like - passwords, user information
+- Sensitive information should not sent via request or response
+- Sanitize Inputs → Prevent SQL Injection & XSS attacks.
+- For large amounts of data use pagination
+- Fix the size of the return data from the server 
+- Use a proxy server
+
 ## 1. Project Structure & Code Organization
 - ✅ Follow Modular Architecture → Break down features into separate modules.
 - ✅ Separate Concerns → Use Controllers (API logic), Services (Business logic), and Repositories (Database logic).
@@ -60,7 +100,7 @@
 ## 6. Exception Handling & Logging
 - ✅ Use Global Exception Filters → Handle errors in a central place.
 - ✅ Use Logger Service (Winston, Pino) → Store logs in a structured format.
-- ✅ Monitor Logs & Errors → Use tools like ELK Stack, Prometheus, Grafana.
+- ✅ Monitor Logs & Errors → Use tools like ELK Stack, Prometheus, and Grafana.
 - ✅ Send Alerts on Critical Errors → Slack, Email, or PagerDuty integration.
 
 ## 7. Deployment & Scaling
