@@ -130,6 +130,7 @@
 - ✅ Implement CI/CD Pipelines → Automate testing & deployment with GitHub Actions, Jenkins, or GitLab CI/CD.
 - ✅ Use Environment Variables → Different .env files for dev, staging, and production.
 - ✅ Deploy to Cloud (AWS, GCP, Azure) → Use Load Balancers & Auto Scaling Groups.
+- Blue Green Deployment
 
 ## 8. Testing Strategy (Unit, Integration, E2E Tests)
 - ✅ Write Unit Tests with Jest → Test individual components.
