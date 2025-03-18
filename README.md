@@ -46,6 +46,7 @@
 - Rollback capacity
 - Fault Tolerance
 - Auto Scale
+- High Availability
 
 ## 1. Project Structure & Code Organization
 - ✅ Follow Modular Architecture → Break down features into separate modules.
@@ -90,6 +91,20 @@
 - ✅ Hash Passwords with bcrypt → Never store plaintext passwords.
 - ✅ Use Validation Pipes → Prevent invalid data from reaching controllers.
 - ✅ Sanitize Inputs → Prevent SQL Injection & XSS attacks.
+- Authentication, Authorization
+- Role-based authentication
+- Click-Jacking Protection
+- URL replay protection
+- SSL
+- Credentials Management
+- CSRF, XSS Protection
+- Session Management
+- Encryption Decryption management
+- API key management (Without API key or secure key not able to access API)
+- Data Security
+- Infrastructure Security
+- VAPT (Vulnerability, Assessment, and penetration testing should be performed at staging and production environment)
+   - Tools (Qualys, Tenable.IO, Nessus, OpenVas, Acunetix, etc.) 
 
 ## 4. Scalable Database Management
 - ✅ Use ORM like TypeORM or Sequelize for better database management.
