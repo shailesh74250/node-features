@@ -1,0 +1,29 @@
+Pipes have two typical use cases:
+
+transformation: transform input data to the desired form (e.g., from string to integer)
+validation: evaluate input data and if valid, simply pass it through unchanged; otherwise, throw an exception
+
+In both cases, pipes operate on the arguments being processed by a controller route handler. Nest interposes a pipe just before a method is invoked, 
+and the pipe receives the arguments destined for the method and operates on them. Any transformation or validation operation takes place at that time, 
+after which the route handler is invoked with any (potentially) transformed arguments.
+
+Hint
+Pipes run inside the exceptions zone. This means that when a Pipe throws an exception it is handled by the exceptions layer
+(global exceptions filter and any exceptions filters that are applied to the current context). Given the above, it should be clear that when an exception is 
+thrown in a Pipe, no controller method is subsequently executed. This gives you a best-practice technique for 
+validating data coming into the application from external sources at the system boundary.
+
+Built-in pipes#
+Nest comes with several pipes available out-of-the-box:
+
+ValidationPipe
+ParseIntPipe
+ParseFloatPipe
+ParseBoolPipe
+ParseArrayPipe
+ParseUUIDPipe
+ParseEnumPipe
+DefaultValuePipe
+ParseFilePipe
+ParseDatePipe
+They're exported from the @nestjs/common package.
