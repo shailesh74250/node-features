@@ -40,6 +40,12 @@
 - For large amounts of data use pagination
 - Fix the size of the return data from the server 
 - Use a proxy server
+- Auditing
+- Monitoring & Performance Matrics
+- Proper README file should be documented correctly
+- Rollback capacity
+- Fault Tolerance
+- Auto Scale
 
 ## 1. Project Structure & Code Organization
 - ✅ Follow Modular Architecture → Break down features into separate modules.
