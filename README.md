@@ -1,3 +1,18 @@
+# Create a Nest project
+- Nest Factory is core utility which is provide utility functions, with help of utility functions we create server and manage nest application
+- $npm install -g @nest/cli
+- $nest new project_name
+- Create module - $nest g module module_name
+- Create controller - $nest g controller controller_name   (responsible for handling the incoming requests and generate responses and send back tothe  client)
+- Controller in nest only used for routing purposes not for business logic
+- Create service (Responsible for business logic) $nest g service service_name (It is Injectable means It can be reuse in entire project)
+- Custom Decorators
+- Interceptors (Logging interceptors) @UseInterceptor(LoggingInterceptor)
+- Guards (Protect application )
+- Pipe (validation, transform data, one data type to another data type) (there are many inbuilt pipe for validation and transform data provided by nest)
+- Exception Filters there are many inbuilt exception classes provided by nest
+
+
 # Core concepts of NestJs
 -  Modules
 -  Controllers
