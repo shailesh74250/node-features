@@ -1,5 +1,6 @@
 
 // Logic for a pagination
+// request having these query params limit =4, page=3
 let limit =4, page = 3; 
 let arr = [
     {name: 'abc1'},
@@ -21,3 +22,5 @@ console.log({totalRecord});
 let result = arr.slice((page-1)*limit, page*limit);
 console.log(result);
 // console.log(pageSize)
+// response will be 
+{ "page": 1, "limit": 4, "totalDocuments": totalRecord, "totalPages": totalPage, "documents": result}
