@@ -15,12 +15,13 @@ let arr = [
     {name: 'xyz10'},
 ];
 let totalPage = Math.ceil(arr.length / limit);
-pageSize = 3;
 console.log({totalPage})
 let totalRecord = arr.length;
 console.log({totalRecord});
-let result = arr.slice((page-1)*limit, page*limit);
-console.log(result);
-// console.log(pageSize)
-// response will be 
-{ "page": 1, "limit": 4, "totalDocuments": totalRecord, "totalPages": totalPage, "documents": result}
+if (page < 1 || page > totalPage) {
+    console.log("Invalid Page Number");
+} else {
+    let result = arr.slice((page-1) * limit, page * limit);
+    console.log(result);
+    return { "page": 1, "limit": 4, "totalDocuments": totalRecord, "totalPages": totalPage, "documents": result}
+}
