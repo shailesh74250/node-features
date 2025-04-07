@@ -1,1 +1,48 @@
+Intercept vs Middleware
+Example: When You Need an Interceptor
 
+Log both request and response
+
+Measure response time
+
+Transform responses
+
+Handle errors globally
+
+
+Use middleware for request-level logic (e.g., IP logging, simple request data).
+Use interceptors for complete control over request-response flow, timing, and logging.
+
+Use Middleware when:
+You need to run logic before the route handler only
+
+You are dealing with raw HTTP stuff (like req, res)
+
+You want to do:
+
+Simple request logging
+
+Basic authentication checks
+
+CORS headers
+
+Rate limiting
+
+Parsing, IP logging, etc.
+
+if (!req.headers['x-api-key']) return res.status(403).send('Forbidden');
+
+✅ Use Interceptors when:
+You want to log both request & response
+
+You want to measure response time
+
+You want to transform responses (e.g. wrap all responses in { data: ... })
+
+You want to catch and handle errors
+
+You need access to controller method return values
+
+You work inside NestJS-style lifecycle (RxJS, Observables, DI)
+
+🧠 Think of interceptors as: “I want to watch or modify the entire request-response lifecycle.”
