@@ -1,0 +1,8 @@
+useClass vs useFactory 
+- useClass is best choice to use while db connection.
+
+For real-world apps:
+
+Use useClass if you're building a well-structured monorepo or microservice setup.
+
+Use useFactory for quick setups or when you need flexibility, especially in smaller services.
