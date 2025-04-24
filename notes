@@ -1,0 +1,6 @@
+Secure network calls with request payload and respose payload encryption & decryption using private key.
+Secure JWT token with encryption timestamp adding at the end of jwt token. 
+In backend check token only valid for 1 min, if token older than 1 min then throw error token too old, so from fe side user get logged out and re-signin, generate new token.
+Follow same process again and gain.
+Conver UUID to hash using store procedures function so that actually uuid should not be visible in payload or FE.
+FE request data with has id not actuall UUID.
