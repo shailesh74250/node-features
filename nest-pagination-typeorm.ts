@@ -33,6 +33,7 @@ export class UsersService {
     const [users, totalRecords] = await this.userRepository.findAndCount({
       take: limit,
       skip: (page - 1) * limit,
+      order: { id: 'ASC' },
     });
 
     return {
