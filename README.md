@@ -1,165 +1,297 @@
-# Create a Nest project
-- Nest Factory is core utility which is provide utility functions, with help of utility functions we create server and manage nest application
-- $npm install -g @nest/cli
-- $nest new project_name
-- Create module - $nest g module module_name
-- Create controller - $nest g controller controller_name   (responsible for handling the incoming requests and generate responses and send back tothe  client)
-- Controller in nest only used for routing purposes not for business logic
-- Create service (Responsible for business logic) $nest g service service_name (It is Injectable means It can be reuse in entire project)
-- Custom Decorators
-- Interceptors (Logging interceptors) @UseInterceptor(LoggingInterceptor)
-- Guards (Protect application )
-- Pipe (validation, transform data, one data type to another data type) (there are many inbuilt pipe for validation and transform data provided by nest)
-- Exception Filters there are many inbuilt exception classes provided by nest
+# Node Features - E-commerce Product Search with Elasticsearch
 
+This project implements an e-commerce product search backend using NestJS + Elasticsearch with two separate APIs:
 
-# Core concepts of NestJs
--  Modules
--  Controllers
--  Services
--  Providers
--  DI
--  Decorators
--  Interceptors
--  Guards
--  Pipes
--  Exception Filters
+- Suggestions API for autocomplete
+- Search API for full product results
 
+Both endpoints are powered by Elasticsearch and automatically fall back to in-memory search when Elasticsearch is unavailable.
 
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+## Swagger Documentation
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+- Swagger UI: http://localhost:3000/api/docs
+- OpenAPI JSON: http://localhost:3000/api/docs-json
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## What Is Implemented
 
-## Description
+### 1) Separate APIs (as required)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- Suggestions endpoint returns only suggestions
+- Search endpoint returns only product results
 
-## Project setup
+### 2) Elasticsearch integration
 
-```bash
-$ npm install
+- Elasticsearch client configured from environment variables
+- Product index is auto-created at startup (if not present)
+- Sample products are seeded only when index is empty
+- Completion suggester is used for fast autocomplete
+- Multi-match full text query is used for product search
+
+### 3) Dockerized local stack
+
+- Elasticsearch container
+- Kibana container
+- API container
+
+## API Endpoints
+
+Base URL:
+
+```text
+http://localhost:3000/api/v1/products
 ```
 
-## Run with Docker (Recommended for Elasticsearch)
+Swagger UI:
+
+```text
+http://localhost:3000/api/docs
+```
+
+OpenAPI JSON:
+
+```text
+http://localhost:3000/api/docs-json
+```
+
+### 1) Suggestions API
+
+Endpoint:
+
+```http
+GET /suggestions
+```
+
+Query params:
+
+- query (required)
+- suggestionSize (optional, default: 5, range: 1-20)
+
+Example:
 
 ```bash
-# Start API + Elasticsearch + Kibana
+curl -s "http://localhost:3000/api/v1/products/suggestions?query=iph&suggestionSize=5"
+```
+
+Sample response:
+
+```json
+{
+  "query": "iph",
+  "suggestions": ["iphone"],
+  "source": "elasticsearch"
+}
+```
+
+### 2) Search API
+
+Endpoint:
+
+```http
+GET /search
+```
+
+Query params:
+
+- query (required)
+- resultSize (optional, default: 20, range: 1-100)
+
+Example:
+
+```bash
+curl -s "http://localhost:3000/api/v1/products/search?query=iphone&resultSize=10"
+```
+
+Sample response:
+
+```json
+{
+  "query": "iphone",
+  "total": 2,
+  "results": [
+    {
+      "id": "P-1001",
+      "name": "Apple iPhone 15 Pro",
+      "description": "6.1-inch display, A17 Pro chip, and advanced triple camera system.",
+      "category": "Smartphones",
+      "brand": "Apple",
+      "tags": ["iphone", "ios", "5g", "premium"],
+      "price": 999,
+      "inStock": true,
+      "suggest": {
+        "input": ["Apple iPhone 15 Pro", "Apple", "Smartphones", "iphone", "ios", "5g", "premium"]
+      }
+    }
+  ],
+  "source": "elasticsearch"
+}
+```
+
+## How Suggestions Work
+
+Suggestions are implemented using Elasticsearch completion suggester:
+
+- Index mapping contains a completion field named suggest
+- During seeding, each product adds suggestion inputs:
+  - product name
+  - brand
+  - category
+  - tags
+- API uses query prefix to get fast autocomplete matches
+
+Elasticsearch query shape used for suggestions:
+
+```json
+{
+  "suggest": {
+    "product_suggestions": {
+      "prefix": "iph",
+      "completion": {
+        "field": "suggest",
+        "size": 5,
+        "skip_duplicates": true
+      }
+    }
+  }
+}
+```
+
+## How Search Works
+
+Full product search uses multi_match query with field boosting:
+
+- name^4
+- brand^3
+- category^2
+- description
+- tags
+
+Fuzziness is set to AUTO to support minor typos.
+
+Elasticsearch query shape used for search:
+
+```json
+{
+  "query": {
+    "multi_match": {
+      "query": "iphone",
+      "fields": ["name^4", "brand^3", "category^2", "description", "tags"],
+      "fuzziness": "AUTO"
+    }
+  },
+  "size": 20
+}
+```
+
+## Startup and Indexing Flow
+
+On application startup:
+
+1. Service pings Elasticsearch
+2. Creates products index if missing
+3. Applies mapping including suggest completion field
+4. Checks document count
+5. Seeds sample products if index is empty
+
+If any Elasticsearch step fails, the service switches to fallback mode:
+
+- suggestions are generated from in-memory sample data
+- search results are generated from in-memory scoring logic
+
+## File-Level Implementation Map
+
+- Product search module: src/modules/product-search/product-search.module.ts
+- API endpoints: src/modules/product-search/product-search.controller.ts
+- Elasticsearch + fallback logic: src/modules/product-search/product-search.service.ts
+- Types/DTO contracts: src/modules/product-search/product-search.types.ts
+- Seed data: src/modules/product-search/sample-products.ts
+- App module wiring: src/app.module.ts
+- Global API prefix setup: src/main.ts
+
+## Environment Variables
+
+Copy values from .env.example:
+
+```env
+PORT=3000
+ES_NODE=http://localhost:9200
+ES_PRODUCTS_INDEX=products
+
+# Optional when ES security is enabled
+# ES_USERNAME=elastic
+# ES_PASSWORD=changeme
+```
+
+## Run with Docker (Recommended)
+
+Start API + Elasticsearch + Kibana:
+
+```bash
 docker compose up --build
 ```
 
-Services:
-- Suggestions API: http://localhost:3000/api/v1/products/suggestions?query=iph
-- Search API: http://localhost:3000/api/v1/products/search?query=iphone
+Service URLs:
+
+- API: http://localhost:3000
 - Elasticsearch: http://localhost:9200
 - Kibana: http://localhost:5601
 
-Useful commands:
+Useful Docker commands:
 
 ```bash
-# Start only Elasticsearch + Kibana (run API on host with npm run start:dev)
+# Start only ES + Kibana (if running API on host)
 docker compose up -d elasticsearch kibana
 
-# Stop everything
+# Rebuild and restart API container
+docker compose up -d --build app
+
+# Stop all containers
 docker compose down
 
-# Stop and remove Elasticsearch data volume
+# Stop containers and remove volumes (clears ES data)
 docker compose down -v
 ```
 
-## Compile and run the project
+## Run without Docker
+
+Install dependencies:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+Start development server:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run start:dev
 ```
 
-## Deployment
+## Kibana: How to View Indexed Products
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+If Kibana is running but products are not visible:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. Open Kibana at http://localhost:5601
+2. Go to Stack Management -> Data Views
+3. Create data view
+4. Set index pattern to products
+5. Select no time field
+6. Open Discover and select the products data view
+
+You can also verify index from terminal:
 
 ```bash
-$ npm install -g mau
-$ mau deploy
+curl -s http://localhost:9200/_cat/indices/products?v
+curl -s http://localhost:9200/products/_count
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Validation Commands
 
-## Resources
+```bash
+npm run build
+npm test -- --runInBand
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## Notes
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-
-
-# Nest.js Concept
-  ## Provide TypeSafty using TypeScript
-  ## Modular Architecture
-  ## Dependency Injection (DI)
-  ## Decorators & Metadata
-  ## Built-in Support for REST & GraphQL
-  ## Middleware, Guards, Interceptors, Filters
-  ## ORM Support (Sequelize, TypeORM, Prisma, etc.)
-  ## WebSockets & Microservices
-  ## Database Integration
+- API prefix is /api
+- Product routes are under /v1/products
+- Suggestions and search are intentionally split into separate APIs
