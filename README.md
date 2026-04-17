@@ -60,6 +60,32 @@
 $ npm install
 ```
 
+## Run with Docker (Recommended for Elasticsearch)
+
+```bash
+# Start API + Elasticsearch + Kibana
+docker compose up --build
+```
+
+Services:
+- Suggestions API: http://localhost:3000/api/v1/products/suggestions?query=iph
+- Search API: http://localhost:3000/api/v1/products/search?query=iphone
+- Elasticsearch: http://localhost:9200
+- Kibana: http://localhost:5601
+
+Useful commands:
+
+```bash
+# Start only Elasticsearch + Kibana (run API on host with npm run start:dev)
+docker compose up -d elasticsearch kibana
+
+# Stop everything
+docker compose down
+
+# Stop and remove Elasticsearch data volume
+docker compose down -v
+```
+
 ## Compile and run the project
 
 ```bash
