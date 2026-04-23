@@ -2,9 +2,13 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Client } from '@elastic/elasticsearch';
 import { sampleProducts } from './sample-products';
 import {
+  PendingSyncAction,
+  ProductDeleteResponse,
   ProductDocument,
+  ProductUpsertResponse,
   ProductSearchResultsResponse,
   ProductSuggestionsResponse,
+  ProductWriteRequest,
 } from './product-search.types';
 
 @Injectable()
@@ -12,6 +16,8 @@ export class ProductSearchService implements OnModuleInit {
   private readonly logger = new Logger(ProductSearchService.name);
   private readonly indexName = process.env.ES_PRODUCTS_INDEX ?? 'products';
   private readonly client: Client;
+  private readonly catalog = [...sampleProducts];
+  private readonly pendingSyncById = new Map<string, PendingSyncAction>();
   private isElasticsearchAvailable = false;
 
   constructor() {
@@ -33,6 +39,8 @@ export class ProductSearchService implements OnModuleInit {
     query: string,
     suggestionSize: number,
   ): Promise<ProductSuggestionsResponse> {
+    await this.syncPendingOperationsIfPossible();
+
     const normalizedQuery = query.trim();
     if (!normalizedQuery) {
       return {
@@ -62,7 +70,8 @@ export class ProductSearchService implements OnModuleInit {
         },
       });
 
-      const suggestOptions = suggestResponse.suggest?.product_suggestions?.[0]?.options;
+      const suggestOptions = suggestResponse.suggest?.product_suggestions?.[0]
+        ?.options as Array<{ text?: string }> | undefined;
       const suggestionTexts = Array.isArray(suggestOptions)
         ? suggestOptions
             .map((option) => option.text)
@@ -87,6 +96,8 @@ export class ProductSearchService implements OnModuleInit {
     query: string,
     resultSize: number,
   ): Promise<ProductSearchResultsResponse> {
+    await this.syncPendingOperationsIfPossible();
+
     const normalizedQuery = query.trim();
     if (!normalizedQuery) {
       return {
@@ -135,12 +146,111 @@ export class ProductSearchService implements OnModuleInit {
     }
   }
 
+  async upsertProduct(
+    input: ProductWriteRequest,
+  ): Promise<ProductUpsertResponse> {
+    const product = this.buildProductDocument(input);
+    this.upsertCatalog(product);
+    this.pendingSyncById.set(product.id, { operation: 'index', product });
+
+    if (!this.isElasticsearchAvailable) {
+      return {
+        product,
+        syncStatus: 'queued',
+        message:
+          'Elasticsearch is currently unavailable. Product was saved in the API and queued for sync.',
+      };
+    }
+
+    try {
+      await this.indexProduct(product, 'wait_for');
+      this.pendingSyncById.delete(product.id);
+
+      return {
+        product,
+        syncStatus: 'indexed',
+        message: 'Product was indexed in Elasticsearch and is now searchable.',
+      };
+    } catch (error) {
+      this.isElasticsearchAvailable = false;
+      this.pendingSyncById.set(product.id, { operation: 'index', product });
+
+      this.logger.warn(
+        `Indexing product ${product.id} failed. Product queued for retry. ${(error as Error).message}`,
+      );
+
+      return {
+        product,
+        syncStatus: 'queued',
+        message:
+          'Product saved, but Elasticsearch indexing failed. Product has been queued for retry.',
+      };
+    }
+  }
+
+  listProducts(): ProductDocument[] {
+    return [...this.catalog];
+  }
+
+  getProductById(id: string): ProductDocument | undefined {
+    const normalizedId = id.trim();
+    return this.catalog.find((product) => product.id === normalizedId);
+  }
+
+  hasProduct(id: string): boolean {
+    return Boolean(this.getProductById(id));
+  }
+
+  async deleteProduct(id: string): Promise<ProductDeleteResponse> {
+    const normalizedId = id.trim();
+    const deleted = this.removeFromCatalog(normalizedId);
+    this.pendingSyncById.set(normalizedId, {
+      operation: 'delete',
+      id: normalizedId,
+    });
+
+    if (!this.isElasticsearchAvailable) {
+      return {
+        id: normalizedId,
+        deleted,
+        syncStatus: 'queued',
+        message:
+          'Product deletion was accepted and queued. Elasticsearch is currently unavailable.',
+      };
+    }
+
+    try {
+      await this.deleteFromIndex(normalizedId, 'wait_for');
+      this.pendingSyncById.delete(normalizedId);
+
+      return {
+        id: normalizedId,
+        deleted,
+        syncStatus: 'indexed',
+        message: 'Product deletion synced to Elasticsearch.',
+      };
+    } catch (error) {
+      this.isElasticsearchAvailable = false;
+      this.logger.warn(
+        `Deleting product ${normalizedId} from Elasticsearch failed. Deletion queued for retry. ${(error as Error).message}`,
+      );
+
+      return {
+        id: normalizedId,
+        deleted,
+        syncStatus: 'queued',
+        message: 'Product deletion queued for retry because Elasticsearch delete failed.',
+      };
+    }
+  }
+
   private async initializeElasticsearch(): Promise<void> {
     try {
       await this.client.ping();
       await this.ensureIndex();
       await this.seedProductsIfNeeded();
       this.isElasticsearchAvailable = true;
+      await this.syncPendingOperationsIfPossible();
       this.logger.log(
         `Connected to Elasticsearch. Product search index: ${this.indexName}`,
       );
@@ -153,7 +263,9 @@ export class ProductSearchService implements OnModuleInit {
   }
 
   private async ensureIndex(): Promise<void> {
-    const indexExists = await this.client.indices.exists({ index: this.indexName });
+    const indexExists = await this.client.indices.exists({
+      index: this.indexName,
+    });
     if (indexExists) {
       return;
     }
@@ -182,14 +294,9 @@ export class ProductSearchService implements OnModuleInit {
       return;
     }
 
-    const operations = sampleProducts.flatMap((product) => [
+    const operations = this.catalog.flatMap((product) => [
       { index: { _index: this.indexName, _id: product.id } },
-      {
-        ...product,
-        suggest: {
-          input: [product.name, product.brand, product.category, ...product.tags],
-        },
-      },
+      this.withSuggestField(product),
     ]);
 
     const bulkResponse = await this.client.bulk({
@@ -210,7 +317,7 @@ export class ProductSearchService implements OnModuleInit {
 
     const suggestions = Array.from(
       new Set(
-        sampleProducts
+        this.catalog
           .map((product) => product.name)
           .filter((name) => name.toLowerCase().includes(loweredQuery))
           .slice(0, suggestionSize),
@@ -230,7 +337,7 @@ export class ProductSearchService implements OnModuleInit {
   ): ProductSearchResultsResponse {
     const loweredQuery = query.toLowerCase();
 
-    const scoredProducts = sampleProducts
+    const scoredProducts = this.catalog
       .map((product) => {
         const searchHaystack = [
           product.name,
@@ -271,5 +378,142 @@ export class ProductSearchService implements OnModuleInit {
       results,
       source: 'fallback',
     };
+  }
+
+  private async syncPendingOperationsIfPossible(): Promise<void> {
+    if (!this.isElasticsearchAvailable || this.pendingSyncById.size === 0) {
+      return;
+    }
+
+    const pendingActions: PendingSyncAction[] = Array.from(this.pendingSyncById.values());
+
+    try {
+      const operations: Array<Record<string, unknown> | ProductDocument> = [];
+      for (const action of pendingActions) {
+        if (action.operation === 'index') {
+          operations.push({ index: { _index: this.indexName, _id: action.product.id } });
+          operations.push(this.withSuggestField(action.product));
+          continue;
+        }
+
+        operations.push({ delete: { _index: this.indexName, _id: action.id } });
+      }
+
+      const bulkResponse = await this.client.bulk({
+        refresh: 'wait_for',
+        operations,
+      });
+
+      if (bulkResponse.errors) {
+        const actionIds: string[] = pendingActions.map((action) =>
+          action.operation === 'index' ? action.product.id : action.id,
+        );
+        const failedIds = new Set<string>();
+        const bulkItems = bulkResponse.items as Array<{
+          index?: { error?: unknown };
+          delete?: { error?: unknown };
+        }>;
+
+        bulkItems.forEach((item, idx) => {
+          const result = item.index ?? item.delete;
+          if (result?.error) {
+            failedIds.add(actionIds[idx]);
+          }
+        });
+
+        for (const actionId of actionIds) {
+          if (!failedIds.has(actionId)) {
+            this.pendingSyncById.delete(actionId);
+          }
+        }
+
+        this.logger.warn(
+          `Pending sync completed with some errors (${failedIds.size} failed out of ${pendingActions.length}).`,
+        );
+        return;
+      }
+
+      this.pendingSyncById.clear();
+      this.logger.log(`Synced ${pendingActions.length} queued product operations to Elasticsearch.`);
+    } catch (error) {
+      this.isElasticsearchAvailable = false;
+      this.logger.warn(
+        `Pending operations sync failed. Will retry later. ${(error as Error).message}`,
+      );
+    }
+  }
+
+  private async indexProduct(
+    product: ProductDocument,
+    refresh: 'wait_for' | boolean,
+  ): Promise<void> {
+    await this.client.index({
+      index: this.indexName,
+      id: product.id,
+      document: this.withSuggestField(product),
+      refresh,
+    });
+  }
+
+  private async deleteFromIndex(
+    id: string,
+    refresh: 'wait_for' | boolean,
+  ): Promise<void> {
+    const documentExists = await this.client.exists({
+      index: this.indexName,
+      id,
+    });
+
+    if (!documentExists) {
+      return;
+    }
+
+    await this.client.delete({
+      index: this.indexName,
+      id,
+      refresh,
+    });
+  }
+
+  private withSuggestField(product: ProductDocument): ProductDocument {
+    return {
+      ...product,
+      suggest: {
+        input: [product.name, product.brand, product.category, ...product.tags],
+      },
+    };
+  }
+
+  private buildProductDocument(input: ProductWriteRequest): ProductDocument {
+    return {
+      id: input.id.trim(),
+      name: input.name.trim(),
+      description: input.description.trim(),
+      category: input.category.trim(),
+      brand: input.brand.trim(),
+      tags: input.tags.map((tag) => tag.trim()).filter((tag) => Boolean(tag)),
+      price: input.price,
+      inStock: input.inStock,
+    };
+  }
+
+  private upsertCatalog(product: ProductDocument): void {
+    const existingIndex = this.catalog.findIndex((item) => item.id === product.id);
+    if (existingIndex >= 0) {
+      this.catalog[existingIndex] = product;
+      return;
+    }
+
+    this.catalog.push(product);
+  }
+
+  private removeFromCatalog(productId: string): boolean {
+    const existingIndex = this.catalog.findIndex((item) => item.id === productId);
+    if (existingIndex < 0) {
+      return false;
+    }
+
+    this.catalog.splice(existingIndex, 1);
+    return true;
   }
 }

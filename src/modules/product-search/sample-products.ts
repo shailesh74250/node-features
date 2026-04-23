@@ -4,7 +4,8 @@ export const sampleProducts: ProductDocument[] = [
   {
     id: 'P-1001',
     name: 'Apple iPhone 15 Pro',
-    description: '6.1-inch display, A17 Pro chip, and advanced triple camera system.',
+    description:
+      '6.1-inch display, A17 Pro chip, and advanced triple camera system.',
     category: 'Smartphones',
     brand: 'Apple',
     tags: ['iphone', 'ios', '5g', 'premium'],
@@ -14,7 +15,8 @@ export const sampleProducts: ProductDocument[] = [
   {
     id: 'P-1002',
     name: 'Samsung Galaxy S24 Ultra',
-    description: 'Flagship Android phone with AI features, S Pen, and pro-grade camera.',
+    description:
+      'Flagship Android phone with AI features, S Pen, and pro-grade camera.',
     category: 'Smartphones',
     brand: 'Samsung',
     tags: ['android', 'galaxy', '5g', 'stylus'],
@@ -24,7 +26,8 @@ export const sampleProducts: ProductDocument[] = [
   {
     id: 'P-1003',
     name: 'Sony WH-1000XM5 Headphones',
-    description: 'Industry-leading noise cancellation with rich audio and long battery life.',
+    description:
+      'Industry-leading noise cancellation with rich audio and long battery life.',
     category: 'Audio',
     brand: 'Sony',
     tags: ['wireless', 'headphones', 'noise cancellation', 'bluetooth'],
@@ -34,7 +37,8 @@ export const sampleProducts: ProductDocument[] = [
   {
     id: 'P-1004',
     name: 'Dell XPS 13 Laptop',
-    description: 'Compact ultrabook with Intel Core processor and InfinityEdge display.',
+    description:
+      'Compact ultrabook with Intel Core processor and InfinityEdge display.',
     category: 'Laptops',
     brand: 'Dell',
     tags: ['ultrabook', 'windows', 'portable'],
@@ -44,7 +48,8 @@ export const sampleProducts: ProductDocument[] = [
   {
     id: 'P-1005',
     name: 'Nike Air Zoom Pegasus 40',
-    description: 'Responsive running shoes designed for daily training and comfort.',
+    description:
+      'Responsive running shoes designed for daily training and comfort.',
     category: 'Footwear',
     brand: 'Nike',
     tags: ['running', 'sports', 'shoes'],
@@ -64,7 +69,8 @@ export const sampleProducts: ProductDocument[] = [
   {
     id: 'P-1007',
     name: 'Canon EOS R50 Camera',
-    description: 'Mirrorless camera with 4K video and smart autofocus for creators.',
+    description:
+      'Mirrorless camera with 4K video and smart autofocus for creators.',
     category: 'Cameras',
     brand: 'Canon',
     tags: ['camera', 'mirrorless', 'photography', '4k'],
@@ -74,7 +80,8 @@ export const sampleProducts: ProductDocument[] = [
   {
     id: 'P-1008',
     name: 'Logitech MX Master 3S Mouse',
-    description: 'Ergonomic wireless mouse with precise tracking and silent clicks.',
+    description:
+      'Ergonomic wireless mouse with precise tracking and silent clicks.',
     category: 'Accessories',
     brand: 'Logitech',
     tags: ['mouse', 'productivity', 'wireless'],

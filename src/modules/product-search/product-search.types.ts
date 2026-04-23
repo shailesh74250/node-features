@@ -12,6 +12,40 @@ export interface ProductDocument {
   };
 }
 
+export interface ProductWriteRequest {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  brand: string;
+  tags: string[];
+  price: number;
+  inStock: boolean;
+}
+
+export interface ProductUpsertResponse {
+  product: ProductDocument;
+  syncStatus: 'indexed' | 'queued';
+  message: string;
+}
+
+export interface ProductDeleteResponse {
+  id: string;
+  deleted: boolean;
+  syncStatus: 'indexed' | 'queued';
+  message: string;
+}
+
+export type PendingSyncAction =
+  | {
+      operation: 'index';
+      product: ProductDocument;
+    }
+  | {
+      operation: 'delete';
+      id: string;
+    };
+
 export interface ProductSuggestionsResponse {
   query: string;
   suggestions: string[];

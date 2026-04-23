@@ -4,6 +4,7 @@ This project implements an e-commerce product search backend using NestJS + Elas
 
 - Suggestions API for autocomplete
 - Search API for full product results
+- Admin upsert API for adding/updating products
 
 Both endpoints are powered by Elasticsearch and automatically fall back to in-memory search when Elasticsearch is unavailable.
 
@@ -126,6 +127,107 @@ Sample response:
 }
 ```
 
+### 3) Admin Upsert API (for latest catalog sync)
+
+Endpoint:
+
+```http
+POST /
+```
+
+Request body:
+
+```json
+{
+  "id": "P-1010",
+  "name": "Apple Watch Ultra 2",
+  "description": "Premium smartwatch with GPS, titanium case, and long battery life.",
+  "category": "Wearables",
+  "brand": "Apple",
+  "tags": ["watch", "wearable", "fitness"],
+  "price": 799,
+  "inStock": true
+}
+```
+
+Example:
+
+```bash
+curl -s -X POST "http://localhost:3000/api/v1/products" \
+  -H "content-type: application/json" \
+  -d '{
+    "id": "P-1010",
+    "name": "Apple Watch Ultra 2",
+    "description": "Premium smartwatch with GPS, titanium case, and long battery life.",
+    "category": "Wearables",
+    "brand": "Apple",
+    "tags": ["watch", "wearable", "fitness"],
+    "price": 799,
+    "inStock": true
+  }'
+```
+
+Sample response when ES is healthy:
+
+```json
+{
+  "product": {
+    "id": "P-1010",
+    "name": "Apple Watch Ultra 2",
+    "description": "Premium smartwatch with GPS, titanium case, and long battery life.",
+    "category": "Wearables",
+    "brand": "Apple",
+    "tags": ["watch", "wearable", "fitness"],
+    "price": 799,
+    "inStock": true
+  },
+  "syncStatus": "indexed",
+  "message": "Product was indexed in Elasticsearch and is now searchable."
+}
+```
+
+If ES is down, product write still succeeds with queueing:
+
+```json
+{
+  "syncStatus": "queued",
+  "message": "Product saved, but Elasticsearch indexing failed. Product has been queued for retry."
+}
+```
+
+Update behavior:
+
+- Sending the same `id` again with new fields updates the product.
+- Update is synced to Elasticsearch with `refresh=wait_for` when ES is healthy.
+- If ES is unavailable, update is queued and retried automatically.
+
+### 4) Admin Delete API
+
+Endpoint:
+
+```http
+DELETE /:id
+```
+
+Example:
+
+```bash
+curl -s -X DELETE "http://localhost:3000/api/v1/products/P-1010"
+```
+
+Sample response:
+
+```json
+{
+  "id": "P-1010",
+  "deleted": true,
+  "syncStatus": "indexed",
+  "message": "Product deletion synced to Elasticsearch."
+}
+```
+
+If ES is unavailable, delete is queued and retried later with `syncStatus: queued`.
+
 ## How Suggestions Work
 
 Suggestions are implemented using Elasticsearch completion suggester:
@@ -197,6 +299,21 @@ If any Elasticsearch step fails, the service switches to fallback mode:
 - suggestions are generated from in-memory sample data
 - search results are generated from in-memory scoring logic
 
+For admin catalog writes:
+
+1. Product is first saved in API memory store (always)
+2. API tries to index document in Elasticsearch with refresh = wait_for
+3. If indexing fails, product is placed in a retry queue
+4. Queue is retried automatically on next read/write path once ES is available
+
+For admin deletes:
+
+1. Product is removed from API memory store immediately
+2. API tries to delete the document in Elasticsearch with refresh = wait_for
+3. If delete fails, operation is queued and retried later
+
+This gives near real-time visibility when ES is healthy, with graceful degradation during outages.
+
 ## File-Level Implementation Map
 
 - Product search module: src/modules/product-search/product-search.module.ts
@@ -215,10 +332,15 @@ Copy values from .env.example:
 PORT=3000
 ES_NODE=http://localhost:9200
 ES_PRODUCTS_INDEX=products
+ADMIN_API_KEY=
 
 # Optional when ES security is enabled
 # ES_USERNAME=elastic
 # ES_PASSWORD=changeme
+
+# Optional admin protection for product upsert endpoint
+# If set, send x-admin-key header with this value for POST /api/v1/products
+# ADMIN_API_KEY=super-secret-key
 ```
 
 ## Run with Docker (Recommended)
