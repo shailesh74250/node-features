@@ -6,7 +6,7 @@ This project implements an e-commerce product search backend using NestJS + Elas
 - Search API for full product results
 - Admin upsert API for adding/updating products
 
-Both endpoints are powered by Elasticsearch and automatically fall back to in-memory search when Elasticsearch is unavailable.
+Both endpoints are powered by Elasticsearch and automatically fall back to PostgreSQL-backed search when Elasticsearch is unavailable.
 
 ## Swagger Documentation
 
@@ -24,12 +24,14 @@ Both endpoints are powered by Elasticsearch and automatically fall back to in-me
 
 - Elasticsearch client configured from environment variables
 - Product index is auto-created at startup (if not present)
-- Sample products are seeded only when index is empty
+- PostgreSQL products catalog is seeded only when table is empty
+- Elasticsearch index is seeded from PostgreSQL when index is empty
 - Completion suggester is used for fast autocomplete
 - Multi-match full text query is used for product search
 
 ### 3) Dockerized local stack
 
+- PostgreSQL container
 - Elasticsearch container
 - Kibana container
 - API container
@@ -292,23 +294,24 @@ On application startup:
 2. Creates products index if missing
 3. Applies mapping including suggest completion field
 4. Checks document count
-5. Seeds sample products if index is empty
+5. Seeds PostgreSQL products catalog if the table is empty
+6. Seeds Elasticsearch index from PostgreSQL if index is empty
 
 If any Elasticsearch step fails, the service switches to fallback mode:
 
-- suggestions are generated from in-memory sample data
-- search results are generated from in-memory scoring logic
+- suggestions are generated from PostgreSQL data using fallback scoring
+- search results are generated from PostgreSQL data using fallback scoring
 
 For admin catalog writes:
 
-1. Product is first saved in API memory store (always)
+1. Product is first saved in PostgreSQL (always)
 2. API tries to index document in Elasticsearch with refresh = wait_for
 3. If indexing fails, product is placed in a retry queue
 4. Queue is retried automatically on next read/write path once ES is available
 
 For admin deletes:
 
-1. Product is removed from API memory store immediately
+1. Product is removed from PostgreSQL immediately
 2. API tries to delete the document in Elasticsearch with refresh = wait_for
 3. If delete fails, operation is queued and retried later
 

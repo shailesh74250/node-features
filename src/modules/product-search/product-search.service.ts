@@ -1,5 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Client } from '@elastic/elasticsearch';
+import { asc, eq, sql } from 'drizzle-orm';
+import { DatabaseService } from '../../database/database.service';
+import { productsTable, ProductRow } from './product-search.schema';
 import { sampleProducts } from './sample-products';
 import {
   PendingSyncAction,
@@ -16,11 +19,10 @@ export class ProductSearchService implements OnModuleInit {
   private readonly logger = new Logger(ProductSearchService.name);
   private readonly indexName = process.env.ES_PRODUCTS_INDEX ?? 'products';
   private readonly client: Client;
-  private readonly catalog = [...sampleProducts];
   private readonly pendingSyncById = new Map<string, PendingSyncAction>();
   private isElasticsearchAvailable = false;
 
-  constructor() {
+  constructor(private readonly databaseService: DatabaseService) {
     const esNode = process.env.ES_NODE ?? 'http://localhost:9200';
     const username = process.env.ES_USERNAME;
     const password = process.env.ES_PASSWORD;
@@ -32,6 +34,7 @@ export class ProductSearchService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
+    await this.initializeDatabase();
     await this.initializeElasticsearch();
   }
 
@@ -51,7 +54,11 @@ export class ProductSearchService implements OnModuleInit {
     }
 
     if (!this.isElasticsearchAvailable) {
-      return this.suggestionsFromFallback(normalizedQuery, suggestionSize);
+      return this.suggestionsFromFallback(
+        normalizedQuery,
+        suggestionSize,
+        await this.listProducts(),
+      );
     }
 
     try {
@@ -86,9 +93,13 @@ export class ProductSearchService implements OnModuleInit {
       };
     } catch (error) {
       this.logger.warn(
-        `Elasticsearch suggestions query failed. Falling back to in-memory suggestions. ${(error as Error).message}`,
+        `Elasticsearch suggestions query failed. Falling back to database suggestions. ${(error as Error).message}`,
       );
-      return this.suggestionsFromFallback(normalizedQuery, suggestionSize);
+      return this.suggestionsFromFallback(
+        normalizedQuery,
+        suggestionSize,
+        await this.listProducts(),
+      );
     }
   }
 
@@ -109,7 +120,11 @@ export class ProductSearchService implements OnModuleInit {
     }
 
     if (!this.isElasticsearchAvailable) {
-      return this.searchResultsFromFallback(normalizedQuery, resultSize);
+      return this.searchResultsFromFallback(
+        normalizedQuery,
+        resultSize,
+        await this.listProducts(),
+      );
     }
 
     try {
@@ -140,9 +155,13 @@ export class ProductSearchService implements OnModuleInit {
       };
     } catch (error) {
       this.logger.warn(
-        `Elasticsearch search query failed. Falling back to in-memory results. ${(error as Error).message}`,
+        `Elasticsearch search query failed. Falling back to database results. ${(error as Error).message}`,
       );
-      return this.searchResultsFromFallback(normalizedQuery, resultSize);
+      return this.searchResultsFromFallback(
+        normalizedQuery,
+        resultSize,
+        await this.listProducts(),
+      );
     }
   }
 
@@ -150,7 +169,7 @@ export class ProductSearchService implements OnModuleInit {
     input: ProductWriteRequest,
   ): Promise<ProductUpsertResponse> {
     const product = this.buildProductDocument(input);
-    this.upsertCatalog(product);
+    await this.upsertProductInDatabase(product);
     this.pendingSyncById.set(product.id, { operation: 'index', product });
 
     if (!this.isElasticsearchAvailable) {
@@ -158,7 +177,7 @@ export class ProductSearchService implements OnModuleInit {
         product,
         syncStatus: 'queued',
         message:
-          'Elasticsearch is currently unavailable. Product was saved in the API and queued for sync.',
+          'Elasticsearch is currently unavailable. Product was saved in PostgreSQL and queued for sync.',
       };
     }
 
@@ -183,27 +202,42 @@ export class ProductSearchService implements OnModuleInit {
         product,
         syncStatus: 'queued',
         message:
-          'Product saved, but Elasticsearch indexing failed. Product has been queued for retry.',
+          'Product saved in PostgreSQL, but Elasticsearch indexing failed. Product has been queued for retry.',
       };
     }
   }
 
-  listProducts(): ProductDocument[] {
-    return [...this.catalog];
+  async listProducts(): Promise<ProductDocument[]> {
+    const rows = await this.databaseService.db
+      .select()
+      .from(productsTable)
+      .orderBy(asc(productsTable.id));
+
+    return rows.map((row) => this.mapDbRowToProduct(row));
   }
 
-  getProductById(id: string): ProductDocument | undefined {
+  async getProductById(id: string): Promise<ProductDocument | undefined> {
     const normalizedId = id.trim();
-    return this.catalog.find((product) => product.id === normalizedId);
+    const rows = await this.databaseService.db
+      .select()
+      .from(productsTable)
+      .where(eq(productsTable.id, normalizedId))
+      .limit(1);
+
+    if (rows.length === 0) {
+      return undefined;
+    }
+
+    return this.mapDbRowToProduct(rows[0]);
   }
 
-  hasProduct(id: string): boolean {
-    return Boolean(this.getProductById(id));
+  async hasProduct(id: string): Promise<boolean> {
+    return Boolean(await this.getProductById(id));
   }
 
   async deleteProduct(id: string): Promise<ProductDeleteResponse> {
     const normalizedId = id.trim();
-    const deleted = this.removeFromCatalog(normalizedId);
+    const deleted = await this.removeFromDatabase(normalizedId);
     this.pendingSyncById.set(normalizedId, {
       operation: 'delete',
       id: normalizedId,
@@ -242,6 +276,35 @@ export class ProductSearchService implements OnModuleInit {
         message: 'Product deletion queued for retry because Elasticsearch delete failed.',
       };
     }
+  }
+
+  private async initializeDatabase(): Promise<void> {
+    await this.databaseService.pool.query(`
+      CREATE TABLE IF NOT EXISTS products_catalog (
+        id text PRIMARY KEY,
+        name text NOT NULL,
+        description text NOT NULL,
+        category text NOT NULL,
+        brand text NOT NULL,
+        tags text[] NOT NULL DEFAULT '{}',
+        price double precision NOT NULL,
+        in_stock boolean NOT NULL
+      )
+    `);
+
+    const [{ count }] = await this.databaseService.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(productsTable);
+
+    if (count > 0) {
+      return;
+    }
+
+    for (const product of sampleProducts) {
+      await this.upsertProductInDatabase(product);
+    }
+
+    this.logger.log(`Seeded PostgreSQL products catalog with ${sampleProducts.length} products.`);
   }
 
   private async initializeElasticsearch(): Promise<void> {
@@ -294,7 +357,12 @@ export class ProductSearchService implements OnModuleInit {
       return;
     }
 
-    const operations = this.catalog.flatMap((product) => [
+    const products = await this.listProducts();
+    if (products.length === 0) {
+      return;
+    }
+
+    const operations = products.flatMap((product) => [
       { index: { _index: this.indexName, _id: product.id } },
       this.withSuggestField(product),
     ]);
@@ -312,12 +380,13 @@ export class ProductSearchService implements OnModuleInit {
   private suggestionsFromFallback(
     query: string,
     suggestionSize: number,
+    products: ProductDocument[],
   ): ProductSuggestionsResponse {
     const loweredQuery = query.toLowerCase();
 
     const suggestions = Array.from(
       new Set(
-        this.catalog
+        products
           .map((product) => product.name)
           .filter((name) => name.toLowerCase().includes(loweredQuery))
           .slice(0, suggestionSize),
@@ -334,10 +403,11 @@ export class ProductSearchService implements OnModuleInit {
   private searchResultsFromFallback(
     query: string,
     resultSize: number,
+    products: ProductDocument[],
   ): ProductSearchResultsResponse {
     const loweredQuery = query.toLowerCase();
 
-    const scoredProducts = this.catalog
+    const scoredProducts = products
       .map((product) => {
         const searchHaystack = [
           product.name,
@@ -497,23 +567,52 @@ export class ProductSearchService implements OnModuleInit {
     };
   }
 
-  private upsertCatalog(product: ProductDocument): void {
-    const existingIndex = this.catalog.findIndex((item) => item.id === product.id);
-    if (existingIndex >= 0) {
-      this.catalog[existingIndex] = product;
-      return;
-    }
-
-    this.catalog.push(product);
+  private async upsertProductInDatabase(product: ProductDocument): Promise<void> {
+    await this.databaseService.db
+      .insert(productsTable)
+      .values({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        brand: product.brand,
+        tags: product.tags,
+        price: product.price,
+        inStock: product.inStock,
+      })
+      .onConflictDoUpdate({
+        target: productsTable.id,
+        set: {
+          name: product.name,
+          description: product.description,
+          category: product.category,
+          brand: product.brand,
+          tags: product.tags,
+          price: product.price,
+          inStock: product.inStock,
+        },
+      });
   }
 
-  private removeFromCatalog(productId: string): boolean {
-    const existingIndex = this.catalog.findIndex((item) => item.id === productId);
-    if (existingIndex < 0) {
-      return false;
-    }
+  private async removeFromDatabase(productId: string): Promise<boolean> {
+    const deletedRows = await this.databaseService.db
+      .delete(productsTable)
+      .where(eq(productsTable.id, productId))
+      .returning({ id: productsTable.id });
 
-    this.catalog.splice(existingIndex, 1);
-    return true;
+    return deletedRows.length > 0;
+  }
+
+  private mapDbRowToProduct(row: ProductRow): ProductDocument {
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      category: row.category,
+      brand: row.brand,
+      tags: row.tags,
+      price: row.price,
+      inStock: row.inStock,
+    };
   }
 }

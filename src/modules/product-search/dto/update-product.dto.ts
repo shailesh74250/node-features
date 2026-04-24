@@ -15,7 +15,8 @@ export class UpdateProductDto {
   name: string;
 
   @ApiProperty({
-    example: 'Premium smartwatch with GPS, titanium case, and long battery life.',
+    example:
+      'Premium smartwatch with GPS, titanium case, and long battery life.',
   })
   @IsString()
   @IsNotEmpty()

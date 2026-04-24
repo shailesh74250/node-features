@@ -73,7 +73,7 @@ export class ProductSearchController {
   ): Promise<ProductUpsertResponse> {
     this.validateAdminKey(adminKey);
 
-    if (this.productSearchService.hasProduct(body.id)) {
+    if (await this.productSearchService.hasProduct(body.id)) {
       throw new ConflictException(`Product with id ${body.id} already exists`);
     }
 
@@ -90,7 +90,7 @@ export class ProductSearchController {
     type: ProductDto,
     isArray: true,
   })
-  listProducts(): ProductDto[] {
+  async listProducts(): Promise<ProductDto[]> {
     return this.productSearchService.listProducts();
   }
 
@@ -101,7 +101,12 @@ export class ProductSearchController {
       'Returns suggestion terms for the typed query prefix. This endpoint is optimized for search box autocomplete.',
   })
   @ApiQuery({ name: 'query', type: String, required: true })
-  @ApiQuery({ name: 'suggestionSize', type: Number, required: false, example: 5 })
+  @ApiQuery({
+    name: 'suggestionSize',
+    type: Number,
+    required: false,
+    example: 5,
+  })
   @ApiOkResponse({
     description: 'Suggestions fetched successfully',
     type: ProductSuggestionsResponseDto,
@@ -118,7 +123,10 @@ export class ProductSearchController {
 
     const boundedSuggestionSize = Math.min(Math.max(suggestionSize, 1), 20);
 
-    return this.productSearchService.getSuggestions(query, boundedSuggestionSize);
+    return this.productSearchService.getSuggestions(
+      query,
+      boundedSuggestionSize,
+    );
   }
 
   @Get('search')
@@ -159,8 +167,10 @@ export class ProductSearchController {
     type: ProductDto,
   })
   @ApiNotFoundResponse({ description: 'Product not found' })
-  getProductById(@Param() params: DeleteProductParamsDto): ProductDto {
-    const product = this.productSearchService.getProductById(params.id);
+  async getProductById(
+    @Param() params: DeleteProductParamsDto,
+  ): Promise<ProductDto> {
+    const product = await this.productSearchService.getProductById(params.id);
     if (!product) {
       throw new NotFoundException(`Product ${params.id} not found`);
     }
@@ -171,7 +181,8 @@ export class ProductSearchController {
   @Put(':id')
   @ApiOperation({
     summary: 'Update product',
-    description: 'Updates an existing product and syncs the latest version to Elasticsearch.',
+    description:
+      'Updates an existing product and syncs the latest version to Elasticsearch.',
   })
   @ApiParam({ name: 'id', type: String, example: 'P-1010' })
   @ApiBody({ type: UpdateProductDto })
@@ -191,7 +202,7 @@ export class ProductSearchController {
   ): Promise<ProductUpsertResponse> {
     this.validateAdminKey(adminKey);
 
-    if (!this.productSearchService.hasProduct(params.id)) {
+    if (!(await this.productSearchService.hasProduct(params.id))) {
       throw new NotFoundException(`Product ${params.id} not found`);
     }
 
@@ -222,7 +233,7 @@ export class ProductSearchController {
   ): Promise<ProductDeleteResponse> {
     this.validateAdminKey(adminKey);
 
-    if (!this.productSearchService.hasProduct(params.id)) {
+    if (!(await this.productSearchService.hasProduct(params.id))) {
       throw new NotFoundException(`Product ${params.id} not found`);
     }
 
