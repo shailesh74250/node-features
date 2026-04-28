@@ -1,139 +1,90 @@
-# Create a Nest project
-- Nest Factory is core utility which is provide utility functions, with help of utility functions we create server and manage nest application
-- $npm install -g @nest/cli
-- $nest new project_name
-- Create module - $nest g module module_name
-- Create controller - $nest g controller controller_name   (responsible for handling the incoming requests and generate responses and send back tothe  client)
-- Controller in nest only used for routing purposes not for business logic
-- Create service (Responsible for business logic) $nest g service service_name (It is Injectable means It can be reuse in entire project)
-- Custom Decorators
-- Interceptors (Logging interceptors) @UseInterceptor(LoggingInterceptor)
-- Guards (Protect application )
-- Pipe (validation, transform data, one data type to another data type) (there are many inbuilt pipe for validation and transform data provided by nest)
-- Exception Filters there are many inbuilt exception classes provided by nest
+# Date/Time + Day Handling with PostgreSQL and Drizzle
 
+This project now includes a real implementation for timezone-aware date/time handling in NestJS.
 
-# Core concepts of NestJs
--  Modules
--  Controllers
--  Services
--  Providers
--  DI
--  Decorators
--  Interceptors
--  Guards
--  Pipes
--  Exception Filters
+## What this demonstrates
 
+- Store all timestamps in UTC (`TIMESTAMPTZ` in PostgreSQL).
+- Accept user input in local timezone and convert to UTC at write-time.
+- Render timestamps in any timezone at read-time.
+- Compute local day boundaries and map them to UTC windows for reliable DB filtering.
 
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+## Stack used
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+- NestJS
+- PostgreSQL
+- Drizzle ORM (`drizzle-orm` + `postgres` driver)
+- Luxon for timezone-safe datetime conversion/formatting
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Environment
 
-## Description
+Set in `.env`:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```env
+PORT=3000
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/node_features
 ```
 
-## Compile and run the project
+## Run
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
+npm run start:dev
 ```
 
-## Run tests
+When the app starts, the `date_time_events` table is auto-created if missing.
 
-```bash
-# unit tests
-$ npm run test
+## API Endpoints
 
-# e2e tests
-$ npm run test:e2e
+### 1) Create event using local datetime + timezone
 
-# test coverage
-$ npm run test:cov
+`POST /date-time/events`
+
+```json
+{
+	"title": "India team standup",
+	"localDateTime": "2026-04-25T09:30:00",
+	"timezone": "Asia/Kolkata"
+}
 ```
 
-## Deployment
+Behavior:
+- Input is interpreted in `Asia/Kolkata`.
+- Converted to UTC.
+- UTC timestamp is stored in PostgreSQL.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### 2) List events rendered for a timezone
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+`GET /date-time/events?timezone=America/New_York`
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
+Response includes:
+- `scheduledAtUtc`
+- `scheduledAtLocal`
+- `localDayOfWeek`
+- `localDate`
+- `localTime`
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 3) Format one ISO timestamp for locale + timezone
 
-## Resources
+`GET /date-time/format?iso=2026-04-25T10:00:00Z&timezone=Europe/Berlin&locale=de-DE`
 
-Check out a few resources that may come in handy when working with NestJS:
+Useful for display formatting and weekday extraction.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### 4) Get local day boundary mapped to UTC
 
-## Support
+`GET /date-time/day-boundary?date=2026-04-25&timezone=Asia/Tokyo`
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Returns local start/end of day and corresponding UTC start/end. This is exactly how real systems safely query "all records for local day X".
 
-## Stay in touch
+### 5) Query events by local day + timezone
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+`GET /date-time/events/by-local-day?date=2026-04-25&timezone=Asia/Kolkata`
 
-## License
+Internally converts day boundary to UTC and filters in DB.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## Golden rule
 
+- Write in UTC.
+- Read in user's timezone.
+- Use local-day boundary to UTC conversion for day-based reports.
 
-# Nest.js Concept
-  ## Provide TypeSafty using TypeScript
-  ## Modular Architecture
-  ## Dependency Injection (DI)
-  ## Decorators & Metadata
-  ## Built-in Support for REST & GraphQL
-  ## Middleware, Guards, Interceptors, Filters
-  ## ORM Support (Sequelize, TypeORM, Prisma, etc.)
-  ## WebSockets & Microservices
-  ## Database Integration
